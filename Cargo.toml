@@ -1,5 +1,5 @@
 [package]
-name = "2048"
+name = "t2048"
 version = "0.1.0"
 authors = ["Dani Pardo <dani.pardo@inmensys.com>"]
 edition = "2018"
@@ -10,3 +10,7 @@ edition = "2018"
 log = "0.4.8"
 rand = "0.6.0"
 simple_logger = "1.6.0"
+
+[dependencies.sdl2]
+default-features = false
+features = ["image", "ttf", "mixer"]

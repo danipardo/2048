@@ -97,6 +97,11 @@ impl Board {
         self.cells = input
     }
 
+    pub fn get_cell(&self, x: usize, y: usize) -> u8 {
+
+        self.cells[x][y]
+
+    }
     pub fn print(&self) {
         for i in 0..4 {
             println!("{:?}", &self.cells[i]);

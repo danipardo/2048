@@ -1,6 +1,50 @@
+
+extern crate sdl2;
+mod resource_manager;
+mod game;
 mod board;
 
-pub fn main() {}
+use board::Board;
+
+use sdl2::pixels::Color;
+
+use sdl2::image::{InitFlag, LoadTexture};
+use std::time::Duration;
+
+pub fn main() {
+
+    let sdl_context = sdl2::init().unwrap();
+    let mut timer = sdl_context.timer().unwrap();
+    let _image_context = sdl2::image::init(InitFlag::PNG | InitFlag::JPG).unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
+
+    let window = video_subsystem
+        .window("2048", 800, 600)
+        .position_centered()
+        .build()
+        .unwrap();
+
+    let mut canvas = window.into_canvas().build().unwrap();
+    let event_pump = sdl_context.event_pump().unwrap();
+
+    let mut texture_creator = canvas.texture_creator();
+    let mut font_context = sdl2::ttf::init().unwrap();
+
+    let mut game = game::Game::new(Box::new(event_pump),
+                                   &mut texture_creator, &mut font_context);
+
+
+    let c = &mut canvas;
+
+    let mut board = Board::new();
+
+    board.add_random_cell();
+    while !game.finished() {
+        game.draw(c, &board);
+        game.update(timer.ticks());
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+    }
+}
 
 
 #[cfg(test)]
