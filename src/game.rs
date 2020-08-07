@@ -5,28 +5,29 @@ use sdl2::render::TextureCreator;
 use sdl2::video::Window;
 use sdl2::video::WindowContext;
 use std::path::Path;
-use std::rc::Rc;
 
 use sdl2::rect::Rect;
 use sdl2::render::Texture;
 
 use sdl2::pixels::Color;
 use sdl2::rect::Point;
-
+use crate::board;
 use crate::resource_manager::{ResourceManager, FontDetails};
 use crate::board::Board;
 use sdl2::ttf::{Sdl2TtfContext, Font};
-use std::collections::HashMap;
+// use std::collections::HashMap;
 use std::borrow::Borrow;
+use sdl2::mixer::{Channel, Chunk};
 
 type TextureManager<'l, T> = ResourceManager<'l, String, Texture<'l>, TextureCreator<T>>;
 type FontManager<'l> = ResourceManager<'l, FontDetails, Font<'l, 'static>, Sdl2TtfContext>;
 
 const CELL_SIZE: u16 = 65;
-const DEFAULT_BROWN: Color = Color::RGB(119,110,101);
-const DEFAULT_WHITE: Color = Color::RGB(249,246,242);
+const DEFAULT_BROWN: Color = Color::RGB(119, 110, 101);
+const DEFAULT_WHITE: Color = Color::RGB(249, 246, 242);
+
 fn color_from_number(n: u8) -> (Color, Color) {
-    match (n) {
+    match n {
         2 => return (Color::RGB(238, 228, 218), DEFAULT_BROWN),
         _ => return (Color::RGB(205, 193, 180), DEFAULT_WHITE)
     }
@@ -36,6 +37,9 @@ pub struct Game<'a> {
     event_pump: Box<sdl2::EventPump>,
     texture_manager: TextureManager<'a, WindowContext>,
     font_manager: FontManager<'a>,
+    move_sound: Chunk,
+    match_sound: Chunk,
+    channel: Channel
 }
 
 impl<'a> Game<'a> {
@@ -52,7 +56,7 @@ impl<'a> Game<'a> {
 
         for x in 0..4 {
             for y in 0..4 {
-                let cell = board.get_cell(x, y);
+                let cell = board.get_cell(y, x);
                 let colors = color_from_number(cell);
 
                 // Draws the cell background
@@ -61,6 +65,10 @@ impl<'a> Game<'a> {
                     300 + x as i32 * (CELL_SIZE + 10) as i32,
                     200 + y as i32 * (CELL_SIZE + 10) as i32,
                 ), CELL_SIZE as u32, CELL_SIZE as u32)).unwrap();
+
+                if cell == 0u8 {
+                    continue;
+                }
 
                 // Get a surface for the number
                 let surface = font.render(cell.to_string().borrow()).blended(colors.1).unwrap();
@@ -93,25 +101,28 @@ impl<'a> Game<'a> {
     ) -> Self {
         let tm = TextureManager::new(texture_creator);
         let fm = FontManager::new(font_context);
-
+        let move_sound = sdl2::mixer::Chunk::from_file(Path::new("res/sound/match.mp3")).unwrap();
+        let match_sound = sdl2::mixer::Chunk::from_file(Path::new("res/sound/move.mp3")).unwrap();
+        let channel = sdl2::mixer::Channel(1);
         Game {
             event_pump,
             texture_manager: tm,
             font_manager: fm,
-
+            move_sound,
+            match_sound,
+            channel,
         }
     }
 
-    pub fn update(&mut self, delta: u32) {
+    pub fn update(&mut self, _delta: u32) {}
 
-        // self.player.update();
+    pub fn game_loop(&mut self, board: &mut Board) -> bool {
+        self.handle_events(board)
     }
+    fn handle_events(&mut self, board: &mut Board) -> bool {
+        let mut finished: bool = false;
 
-    pub fn finished(&mut self) -> bool {
-        self.handle_events()
-    }
-    fn handle_events(&mut self) -> bool {
-        let mut r: bool = false;
+        let mut board_changed: bool = false;
 
         for event in self.event_pump.poll_iter() {
             match event {
@@ -119,12 +130,42 @@ impl<'a> Game<'a> {
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => r = true,
+                } => finished = true,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Down), ..
+                } => {
+                    println!("Key down!");
+                    board_changed = board.actuate(board::Direction::Down);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Up), ..
+                } => {
+                    println!("Key up!");
+                    board_changed = board.actuate(board::Direction::Up);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Left), ..
+                } => {
+                    println!("Key left!");
+                    board_changed = board.actuate(board::Direction::Left);
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Right), ..
+                } => {
+                    println!("Key right!");
+                    board_changed = board.actuate(board::Direction::Right);
+                }
+
                 _ => {}
             }
         }
 
-        r
+        if board_changed {
+            self.channel.play(&self.move_sound, 0);
+            board.add_random_cell();
+        }
+
+        finished
     }
 }
 

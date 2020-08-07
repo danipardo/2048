@@ -5,6 +5,7 @@ use rand::Rng;
 
 use rand;
 pub use self::Direction::{};
+// use std::collections::HashSet;
 
 pub struct Board {
     cells: [[u8; 4]; 4],
@@ -28,33 +29,65 @@ pub fn actuate_board(board: &[[u8; 4]; 4]) -> [[u8; 4]; 4] {
     result
 }
 
+// Partint de la posicio n, i tirant cap a l'esquerre,
+// busca el primer numero que no es zero
+fn find_rev(input: &[u8; 4], n: usize) -> Option<usize> {
+    if n == 0 {
+        return None;
+    }
+    let mut x = n - 1;
+    while input.get(x).is_some() {
+        let value = input.get(x).unwrap();
+        if *value == 0 {
+            if x == 0 {
+                return None;
+            }
+            x = x - 1;
+        } else {
+            return Some(x);
+        }
+    }
+    None
+}
+
 pub fn actuate_row(input: &[u8; 4]) -> [u8; 4] {
-    let mut result: [u8; 4] = [0u8; 4];
-    let mut actuated = false;
-    for i in (1..4).rev() {
-        let value = input[i];
+    let mut result = input.clone();
+    let mut score = 0;
+    let mut match_done = false;
+    let mut should_loop = true;
+    while should_loop {
+        should_loop = false;
+        for i in (1..4).rev() {
+            let value = result[i];
+            let j = find_rev(&result, i);
 
-        if value == 0 && input[i - 1] > 0 {
-            result[i] = input[i - 1];
-            actuated = true;
+            if j.is_none() {
+                continue;
+            }
+
+            let j = j.unwrap();
+            if value == 0 && result[j] > 0 {
+                result[i] = result[j];
+                result[j] = 0;
+                should_loop = true;
+            }
+            if value > 0 && result[j] == value && !match_done {
+                result[i] = value * 2;
+                score = score + value * 2;
+                should_loop = true;
+                match_done = true;
+                result[j] = 0;
+            }
+            println!("j: {}, Loop {} : {:?} should_loop: {}",j, i, &result, should_loop);
         }
-        if value > 0 && input[i - 1] == value {
-            result[i] = value * 2;
-            result[i - 1] = 0;
-            actuated = true;
-        }
-        if !actuated && value > 0 && input[i - 1] != value {
-            result[i] = input[i];
-        }
+
     }
 
-    if actuated {
-        result = actuate_row(&result);
-    }
 
     result
 }
 
+// Rotates the board 90 degrees clockwise
 pub fn rotate(board: &[[u8; 4]; 4]) -> [[u8; 4]; 4] {
     let mut v2 = [[0u8; 4]; 4];
     for x in 0..4 {
@@ -98,9 +131,7 @@ impl Board {
     }
 
     pub fn get_cell(&self, x: usize, y: usize) -> u8 {
-
         self.cells[x][y]
-
     }
     pub fn print(&self) {
         for i in 0..4 {
@@ -121,6 +152,9 @@ impl Board {
                 new_board = invert(&new_board);
                 new_board = actuate_board(&new_board);
                 new_board = invert(&new_board);
+                new_board = rotate(&new_board);
+                new_board = rotate(&new_board);
+                new_board = rotate(&new_board);
             }
             Direction::Up => {
                 new_board = rotate(&self.cells);

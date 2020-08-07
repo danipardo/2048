@@ -1,21 +1,20 @@
+mod board;
 
 extern crate sdl2;
+
 mod resource_manager;
 mod game;
-mod board;
 
 use board::Board;
 
-use sdl2::pixels::Color;
-
-use sdl2::image::{InitFlag, LoadTexture};
+use sdl2::mixer::{InitFlag, AUDIO_S16LSB, DEFAULT_CHANNELS};
 use std::time::Duration;
 
 pub fn main() {
-
     let sdl_context = sdl2::init().unwrap();
     let mut timer = sdl_context.timer().unwrap();
-    let _image_context = sdl2::image::init(InitFlag::PNG | InitFlag::JPG).unwrap();
+    let _image_context = sdl2::image::init(sdl2::image::InitFlag::PNG |
+        sdl2::image::InitFlag::JPG).unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem
@@ -30,6 +29,18 @@ pub fn main() {
     let mut texture_creator = canvas.texture_creator();
     let mut font_context = sdl2::ttf::init().unwrap();
 
+    // Init sound system
+    let frequency = 44_100;
+    let format = AUDIO_S16LSB; // signed 16 bit samples, in little-endian byte order
+    let channels = DEFAULT_CHANNELS; // Stereo
+    let chunk_size = 1_024;
+    sdl2::mixer::open_audio(frequency, format, channels, chunk_size).unwrap();
+    let _mixer_context =
+        sdl2::mixer::init(InitFlag::MP3 | InitFlag::FLAC | InitFlag::MOD | InitFlag::OGG).unwrap();
+    sdl2::mixer::allocate_channels(6);
+
+
+
     let mut game = game::Game::new(Box::new(event_pump),
                                    &mut texture_creator, &mut font_context);
 
@@ -39,7 +50,7 @@ pub fn main() {
     let mut board = Board::new();
 
     board.add_random_cell();
-    while !game.finished() {
+    while !game.game_loop(&mut board) {
         game.draw(c, &board);
         game.update(timer.ticks());
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
@@ -54,31 +65,51 @@ mod tests {
 
     #[test]
     fn test_actuate1() {
-        let mut board = board::Board::new();
         assert_eq!(board::actuate_row(&[0, 4, 0, 0]), [0, 0, 0, 4]);
     }
 
     #[test]
     fn test_actuate2() {
-        let mut board = board::Board::new();
         assert_eq!(board::actuate_row(&[0, 0, 0, 4]), [0, 0, 0, 4]);
     }
 
     #[test]
     fn test_actuate3() {
-        let mut board = board::Board::new();
         assert_eq!(board::actuate_row(&[2, 0, 2, 0]), [0, 0, 0, 4]);
     }
 
     #[test]
-    fn test_actuate4() {
-        let mut board = board::Board::new();
+    fn test_actuate4a() {
         assert_eq!(board::actuate_row(&[4, 4, 8, 8]), [0, 0, 8, 16]);
     }
 
     #[test]
+    fn test_actuate4b() {
+        assert_eq!(board::actuate_row(&[4, 2, 0, 2]), [0, 0, 4, 4]);
+    }
+
+    #[test]
+    fn test_actuate5() {
+        assert_eq!(board::actuate_row(&[2, 8, 0, 0]), [0, 0, 2, 8]);
+    }
+
+    #[test]
+    fn test_actuate6() {
+        assert_eq!(board::actuate_row(&[2, 0, 8, 0]), [0, 0, 2, 8]);
+    }
+
+    #[test]
+    fn test_actuate7() {
+        assert_eq!(board::actuate_row(&[2, 0, 8, 4]), [0, 2, 8, 4]);
+    }
+
+    #[test]
+    fn test_actuate8() {
+        assert_eq!(board::actuate_row(&[2, 2, 4, 2]), [0, 4, 4, 2]);
+    }
+
+    #[test]
     fn test_rotate1() {
-        let mut board = board::Board::new();
 
         let c1 = [
             [5, 6, 7, 8],
@@ -99,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_rotate2() {
-        let mut board = board::Board::new();
+        // let  _board = board::Board::new();
 
         let c1 = [
             [5, 6, 7, 8],
@@ -123,8 +154,8 @@ mod tests {
         let mut board = board::Board::new();
 
         let mut changed = true;
-        for i in 0..20 {
-            if (changed) {
+        for _ in 0..20 {
+            if changed {
                 board.add_random_cell();
                 changed = board.actuate(board::Direction::Left);
             }
