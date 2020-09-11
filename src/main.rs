@@ -40,7 +40,6 @@ pub fn main() {
     sdl2::mixer::allocate_channels(6);
 
 
-
     let mut game = game::Game::new(Box::new(event_pump),
                                    &mut texture_creator, &mut font_context);
 
@@ -84,6 +83,14 @@ mod tests {
     }
 
     #[test]
+    fn test_slide_row() {
+        // assert_eq!(board::slide_row(&[4, 0, 2, 0]), [0, 0, 4, 2]);
+        // assert_eq!(board::slide_row(&[4, 2, 2, 0]), [0, 4, 2, 2]);
+        // assert_eq!(board::slide_row(&[0, 0, 2, 2]), [0, 0, 2, 2]);
+        assert_eq!(board::slide_row(&[4, 4, 2, 2]), [4, 4, 2, 2]);
+    }
+
+    #[test]
     fn test_actuate4b() {
         assert_eq!(board::actuate_row(&[4, 2, 0, 2]), [0, 0, 4, 4]);
     }
@@ -110,7 +117,6 @@ mod tests {
 
     #[test]
     fn test_rotate1() {
-
         let c1 = [
             [5, 6, 7, 8],
             [0, 1, 2, 3],

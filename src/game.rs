@@ -26,7 +26,7 @@ const CELL_SIZE: u16 = 65;
 const DEFAULT_BROWN: Color = Color::RGB(119, 110, 101);
 const DEFAULT_WHITE: Color = Color::RGB(249, 246, 242);
 
-fn color_from_number(n: u8) -> (Color, Color) {
+fn color_from_number(n: u16) -> (Color, Color) {
     match n {
         2 => return (Color::RGB(238, 228, 218), DEFAULT_BROWN),
         _ => return (Color::RGB(205, 193, 180), DEFAULT_WHITE)
@@ -66,7 +66,7 @@ impl<'a> Game<'a> {
                     200 + y as i32 * (CELL_SIZE + 10) as i32,
                 ), CELL_SIZE as u32, CELL_SIZE as u32)).unwrap();
 
-                if cell == 0u8 {
+                if cell == 0u16 {
                     continue;
                 }
 
